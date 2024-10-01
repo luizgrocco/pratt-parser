@@ -94,10 +94,21 @@ const tokenMatchers = [
       return fail("Failed to match: " + input);
     },
   },
+  {
+    kind: "WHITESPACE" as const,
+    matcher: (input: string) => {
+      const whitespaceMatch = input.match(/^\s+/);
+      if (whitespaceMatch) {
+        return ok({ match: whitespaceMatch.join(), skip: true });
+      }
+      return fail("Failed to match: " + input);
+    },
+  },
 ];
 
 const tokenizer = new Tokenizer(tokenMatchers);
 
-const tokens = tokenizer.tokenize("14.3+ 32 - 44 * 43 ^ 4 / 23");
+const tokens = tokenizer.tokenize("14+                32 - 44 * 43 ^ 4 / 23");
 
 if (tokens.ok) console.log(tokens.value.map((t) => t.value));
+if (!tokens.ok) console.log(tokens.error);

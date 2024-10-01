@@ -1,115 +1,70 @@
-type TokenKind =
-  | "EOF"
-  | "STRING"
-  | "NUMBER"
-  | "IDENTIFIER"
+import { fail, ok, Result } from "./model.ts";
 
-  // Grouping symbols
-  | "("
-  | ")"
-  | "["
-  | "]"
-  | "{"
-  | "}"
+type Match = {
+  match: string;
+  skip?: boolean;
+};
 
-  // Mathematical Operators
-  | "+"
-  | "-"
-  | "*"
-  | "/"
-  | "%"
-  | "^"
+export type TokenMatcher<Kind> = {
+  kind: Kind;
+  matcher: (input: string) => Result<Match>;
+};
 
-  // ???
-  | "COMMA"
-  | "DOT"
-  | "DOT_DOT"
-  | "SEMI_COLON"
-  | "INTERROGATION"
-  | "EXCLAMATION"
-  | "COLON"
-
-  // Assignment Operators
-  | "ASSIGN"
-
-  // Comparison Operators
-  | "EQUALS"
-  | "NOT_EQUALS"
-  | "LESS_THAN"
-  | "LESS_THAN_OR_EQUAL"
-  | "GREATER_THAN"
-  | "GREATER_THAN_OR_EQUAL"
-
-  // Logical Operators
-  | "OR"
-  | "AND"
-  | "INCREMENT"
-  | "DECREMENT"
-
-  // Reserved Keywords
-  | "LET"
-  | "CONST"
-  | "CLASS"
-  | "NEW"
-  | "IMPORT"
-  | "FROM"
-  | "EXPORT"
-  | "IF"
-  | "ELSE"
-  | "FOR"
-  | "WHILE"
-  | "TRUE"
-  | "FALSE"
-  | "RETURN"
-  | "FUNCTION"
-  | "TYPEOF"
-  | "IN";
-
-type Token = {
-  kind: TokenKind;
+export type Token<T> = {
+  kind: T;
   value: string;
 };
 
-type PatternMatcher = {
-  matcher: (input: string) => boolean;
-  handler: (tokenizer: Tokenizer) => void;
-};
-
-export class Tokenizer {
-  patterns: PatternMatcher[];
-  tokens: Token[];
+export class Tokenizer<Kind = never> {
+  patterns: TokenMatcher<Kind>[];
+  tokens: Token<Kind>[];
   source: string;
   position: number;
 
-  constructor(patterns: PatternMatcher[] = []) {
+  constructor(patterns: TokenMatcher<Kind>[]) {
     this.patterns = patterns;
     this.tokens = [];
     this.source = "";
     this.position = 0;
   }
 
-  addPattern(pattern: PatternMatcher) {
-    this.patterns.push(pattern);
-  }
-
-  debugToken(token: Token) {
-    console.log(`${token.kind} (${token.value})\n`);
-  }
-
-  newToken(kind: TokenKind, value: string): Token {
-    return {
-      kind,
-      value,
-    };
-  }
-
-  tokenize(source: string): Token[] {
-    this.source = source;
+  tokenize(source: string): Result<Token<Kind>[]> {
+    this.source = source.replace(/\s+/g, "");
     this.position = 0;
     this.tokens = [];
 
-    // TODO: Tokenizing logic
+    let remainingSource = this.source;
 
-    return this.tokens;
+    while (this.position < this.source.length) {
+      remainingSource = this.source.slice(this.position);
+
+      let longestMatchedToken: Token<Kind> | null = null;
+      let shouldSkip = false;
+
+      for (const { kind, matcher } of this.patterns) {
+        const matchedToken = matcher(remainingSource);
+
+        if (matchedToken.ok) {
+          const { match, skip } = matchedToken.value;
+
+          if (
+            longestMatchedToken == null ||
+            match.length > longestMatchedToken.value.length
+          ) {
+            longestMatchedToken = { kind, value: match };
+            shouldSkip = Boolean(skip);
+          }
+        }
+      }
+
+      if (longestMatchedToken == null) {
+        return fail("Unexpected token: " + remainingSource[0]);
+      }
+
+      if (!shouldSkip) this.tokens.push(longestMatchedToken);
+      this.position += longestMatchedToken.value.length;
+    }
+
+    return ok(this.tokens);
   }
 }

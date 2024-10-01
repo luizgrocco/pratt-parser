@@ -29,7 +29,7 @@ export class Tokenizer<Kind = never> {
   }
 
   tokenize(source: string): Result<Token<Kind>[]> {
-    this.source = source.replace(/\s+/g, "");
+    this.source = source;
     this.position = 0;
     this.tokens = [];
 
@@ -58,7 +58,9 @@ export class Tokenizer<Kind = never> {
       }
 
       if (longestMatchedToken == null) {
-        return fail("Unexpected token: " + remainingSource[0]);
+        return fail(
+          `Unexpected token: "${remainingSource[0]}" at position ${this.position}`
+        );
       }
 
       if (!shouldSkip) this.tokens.push(longestMatchedToken);

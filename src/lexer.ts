@@ -1,44 +1,47 @@
-import { fail, ok, Result } from "./model.ts";
+import { fail, ok, Result } from "./result.ts";
 
 type Match = {
   match: string;
   skip?: boolean;
 };
 
-export type TokenMatcher<Kind> = {
+export type PatternMatcher<Kind extends string> = {
   kind: Kind;
   matcher: (input: string) => Result<Match>;
 };
 
-export type Token<T> = {
-  kind: T;
+export type Token<Kind extends string> = {
+  kind: Kind;
   value: string;
 };
 
-export class Tokenizer<Kind = never> {
-  patterns: TokenMatcher<Kind>[];
+export class Tokenizer<Kind extends string = never> {
+  patterns: PatternMatcher<Kind>[];
   tokens: Token<Kind>[];
+  tokenPosition: number;
   source: string;
-  position: number;
+  sourcePosition: number;
 
-  constructor(patterns: TokenMatcher<Kind>[]) {
+  constructor(patterns: PatternMatcher<Kind>[]) {
     this.patterns = patterns;
     this.tokens = [];
+    this.tokenPosition = 0;
     this.source = "";
-    this.position = 0;
+    this.sourcePosition = 0;
   }
 
   tokenize(source: string): Result<Token<Kind>[]> {
     this.source = source;
-    this.position = 0;
+    this.sourcePosition = 0;
     this.tokens = [];
+    this.tokenPosition = 0;
 
     let remainingSource = this.source;
 
-    while (this.position < this.source.length) {
-      remainingSource = this.source.slice(this.position);
+    while (this.sourcePosition < this.source.length) {
+      remainingSource = this.source.slice(this.sourcePosition);
 
-      let longestMatchedToken: Token<Kind> | null = null;
+      let longestMatchedToken: Result<Token<Kind>> = fail("No match found");
       let shouldSkip = false;
 
       for (const { kind, matcher } of this.patterns) {
@@ -48,25 +51,35 @@ export class Tokenizer<Kind = never> {
           const { match, skip } = matchedToken.value;
 
           if (
-            longestMatchedToken == null ||
-            match.length > longestMatchedToken.value.length
+            !longestMatchedToken.ok ||
+            match.length > longestMatchedToken.value.value.length
           ) {
-            longestMatchedToken = { kind, value: match };
+            longestMatchedToken = ok({ kind, value: match });
             shouldSkip = Boolean(skip);
           }
         }
       }
 
-      if (longestMatchedToken == null) {
+      if (!longestMatchedToken.ok) {
         return fail(
-          `Unexpected token: "${remainingSource[0]}" at position ${this.position}`
+          `Unexpected token: "${remainingSource[0]}" at position ${this.sourcePosition}`
         );
       }
 
-      if (!shouldSkip) this.tokens.push(longestMatchedToken);
-      this.position += longestMatchedToken.value.length;
+      if (!shouldSkip) this.tokens.push(longestMatchedToken.value);
+      this.sourcePosition += longestMatchedToken.value.value.length;
     }
 
     return ok(this.tokens);
+  }
+
+  peek(): Result<Token<Kind>> {
+    const currToken = this.tokens.at(this.tokenPosition);
+    if (currToken) return ok(currToken);
+    return fail("End of tokens");
+  }
+
+  next(): void {
+    this.tokenPosition++;
   }
 }

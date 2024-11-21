@@ -1,5 +1,5 @@
 import { Tokenizer, PatternMatcher, type Token } from "./lexer.ts";
-import { fail, ok, Result } from "./result.ts";
+import { err, ok, Result } from "./result.ts";
 
 type Symbol<Kind extends string, ASTNode> = {
   kind: Kind;
@@ -39,11 +39,11 @@ export class Parser<Kind extends string, Node> {
     const nextToken = this.getToken();
 
     // Didn't find a next token, fail
-    if (!nextToken.ok) return fail("No tokens left to skip");
+    if (!nextToken.ok) return err("No tokens left to skip");
 
     // Found a next token, but it doesn't match, fail
     if (token !== nextToken.value.value) {
-      return fail(`Expected ${token} to skip, got ${nextToken.value.value}`);
+      return err(`Expected ${token} to skip, got ${nextToken.value.value}`);
     }
 
     // TODO: Should advance?
@@ -54,7 +54,7 @@ export class Parser<Kind extends string, Node> {
   expression(rbp: number): Result<Node> {
     let currToken = this.getToken();
     if (!currToken.ok)
-      return fail("Expected at least one token in expression, got none");
+      return err("Expected at least one token in expression, got none");
 
     let currSymbol = this.symbols[currToken.value.kind];
 
@@ -65,7 +65,7 @@ export class Parser<Kind extends string, Node> {
       // This error means the current token cannot appear as the first thing in an expression
       // because it is some kind of infix operatior or even a sufix operator that depends on
       // things before it
-      return fail(`Expected token ${currSymbol.kind} to have a nud`);
+      return err(`Expected token ${currSymbol.kind} to have a nud`);
     }
     let left = currSymbol.nud(currToken.value);
 
@@ -81,7 +81,7 @@ export class Parser<Kind extends string, Node> {
         // TODO: Improve this error message, what does having a led mean to the user?
         // This error means the current token doesn't expect anything to its left when used
         // in an expression, but it was used as if it did (e.g. it was used like an operator, etc...)
-        return fail(`Expected token ${currSymbol.kind} to have a led`);
+        return err(`Expected token ${currSymbol.kind} to have a led`);
       }
 
       left = currSymbol.led(currToken.value, left);

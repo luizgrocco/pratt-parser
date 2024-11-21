@@ -1,5 +1,4 @@
-import { Tokenizer, TokenMatcher } from "./lexer.ts";
-import { fail, ok } from "./model.ts";
+import { err, ok } from "./result.ts";
 
 type TokenKind =
   | "EOF"
@@ -68,13 +67,15 @@ type TokenKind =
   | "TYPEOF"
   | "IN";
 
-function createConstToken<Kind extends string>(kind: Kind): TokenMatcher<Kind> {
+function createConstToken<Kind extends string>(
+  kind: Kind
+): PatternMatcher<Kind> {
   return {
     kind,
     matcher: (input: string) =>
       input.startsWith(kind.toLowerCase())
         ? ok({ match: kind.toLowerCase() })
-        : fail("Failed to match: " + kind),
+        : err("Failed to match: " + kind),
   };
 }
 
@@ -91,7 +92,7 @@ const tokenMatchers = [
       if (numberMatch) {
         return ok({ match: numberMatch.join() });
       }
-      return fail("Failed to match: " + input);
+      return err("Failed to match: " + input);
     },
   },
   {
@@ -101,7 +102,7 @@ const tokenMatchers = [
       if (whitespaceMatch) {
         return ok({ match: whitespaceMatch.join(), skip: true });
       }
-      return fail("Failed to match: " + input);
+      return err("Failed to match: " + input);
     },
   },
 ];

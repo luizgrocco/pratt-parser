@@ -1,4 +1,4 @@
-import { fail, ok, Result } from "./result.ts";
+import { err, ok, Result } from "./result.ts";
 
 type Match = {
   match: string;
@@ -41,7 +41,7 @@ export class Tokenizer<Kind extends string = never> {
     while (this.sourcePosition < this.source.length) {
       remainingSource = this.source.slice(this.sourcePosition);
 
-      let longestMatchedToken: Result<Token<Kind>> = fail("No match found");
+      let longestMatchedToken: Result<Token<Kind>> = err("No match found");
       let shouldSkip = false;
 
       for (const { kind, matcher } of this.patterns) {
@@ -61,7 +61,7 @@ export class Tokenizer<Kind extends string = never> {
       }
 
       if (!longestMatchedToken.ok) {
-        return fail(
+        return err(
           `Unexpected token: "${remainingSource[0]}" at position ${this.sourcePosition}`
         );
       }
@@ -76,7 +76,7 @@ export class Tokenizer<Kind extends string = never> {
   peek(): Result<Token<Kind>> {
     const currToken = this.tokens.at(this.tokenPosition);
     if (currToken) return ok(currToken);
-    return fail("End of tokens");
+    return err("End of tokens");
   }
 
   next(): void {

@@ -62,7 +62,9 @@ export class Tokenizer<Kind extends string = never> {
 
       if (!longestMatchedToken.ok) {
         return err(
-          `Unexpected token: "${remainingSource[0]}" at position ${this.sourcePosition}`
+          `Unexpected token: "${
+            remainingSource[0]
+          }" at position ${this.sourcePosition}`,
         );
       }
 

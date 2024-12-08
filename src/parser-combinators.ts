@@ -1,4 +1,3 @@
-// deno-lint-ignore-file no-explicit-any
 import type { Result } from "./result.ts";
 import { err, ok } from "./result.ts";
 
@@ -9,52 +8,48 @@ export type Parser<T> = (input: ParseInput) => ParseResult<T>;
 
 export const succeed = <T>(
   result: T,
-  inputAfterOk: ParseInput
+  inputAfterOk: ParseInput,
 ): ParseResult<T> => [ok(result), inputAfterOk];
 
 // TODO: I have come to regret this decision, you will never use the remaining string when a parser fails.
 export const fail = <T = never>(
   inputAfterFail: ParseInput,
-  errMsg = "failed without a message"
+  errMsg = "failed without a message",
 ): ParseResult<T> => [err(errMsg), inputAfterFail];
 
 type Char = string;
 
 export const satisfy =
-  (testFn: (c: Char) => boolean): Parser<Char> =>
-  (input: ParseInput) =>
+  (testFn: (c: Char) => boolean): Parser<Char> => (input: ParseInput) =>
     input.length > 0 && testFn(input[0])
       ? succeed(input[0], input.slice(1))
       : fail(input, `failed to parse ${input[0]}`);
 
 export const char =
-  <const T extends string>(c: T): Parser<T> =>
-  (input: ParseInput) =>
-    input.length > 0 && input[0] === c
-      ? succeed(c, input.slice(1))
-      : fail(
-          input,
-          input.length === 0
-            ? `failed to parse the char "${c}" on an empty input`
-            : `failed to parse the char "${c}" on input "${input}"`
-        );
+  <const T extends string>(c: T): Parser<T> => (input: ParseInput) =>
+    input.length > 0 && input[0] === c ? succeed(c, input.slice(1)) : fail(
+      input,
+      input.length === 0
+        ? `failed to parse the char "${c}" on an empty input`
+        : `failed to parse the char "${c}" on input "${input}"`,
+    );
 
-export const letter =
-  <const T extends string>(c: T): Parser<Lowercase<T>> =>
-  (input: ParseInput) => {
-    const [result, remainder] = or(
-      char(c.toLowerCase()),
-      char(c.toUpperCase())
-    )(input);
-    if (result.ok) return succeed(c.toLowerCase() as Lowercase<T>, remainder);
-    return fail(remainder, result.error);
-  };
+export const letter = <const T extends string>(c: T): Parser<Lowercase<T>> =>
+(
+  input: ParseInput,
+) => {
+  const [result, remainder] = or(
+    char(c.toLowerCase()),
+    char(c.toUpperCase()),
+  )(input);
+  if (result.ok) return succeed(c.toLowerCase() as Lowercase<T>, remainder);
+  return fail(remainder, result.error);
+};
 
 export const empty: Parser<""> = (input: ParseInput) => succeed("", input);
 
 export const literal =
-  <T extends string>(literal: T): Parser<T> =>
-  (input: ParseInput) =>
+  <T extends string>(literal: T): Parser<T> => (input: ParseInput) =>
     input.startsWith(literal)
       ? succeed(literal, input.slice(literal.length))
       : fail(input, `failed to parse literal "${literal}" on input "${input}"`);
@@ -77,6 +72,7 @@ export const or =
   };
 
 export const any =
+  // deno-lint-ignore no-explicit-any
   <U, T extends any[]>(
     firstParser: Parser<U>,
     ...parsers: { [K in keyof T]: Parser<T[K]> }
@@ -107,6 +103,7 @@ export const and =
       : [secondResult, input];
   };
 
+// deno-lint-ignore no-explicit-any
 export const sequence = <U, T extends any[]>(
   firstParser: Parser<U>,
   ...parsers: { [K in keyof T]: Parser<T[K]> }
@@ -114,12 +111,11 @@ export const sequence = <U, T extends any[]>(
   parsers.reduce(
     (acc, parser) =>
       map(and(acc, parser), ([results, result]) => [...results, result]),
-    map(firstParser, (result) => [result])
+    map(firstParser, (result) => [result]),
   );
 
 export const exactly =
-  <T>(n: number, parser: Parser<T>): Parser<T[]> =>
-  (input: ParseInput) => {
+  <T>(n: number, parser: Parser<T>): Parser<T[]> => (input: ParseInput) => {
     let inputRemainder = input;
     const resultAcc: T[] = [];
 
@@ -136,8 +132,7 @@ export const exactly =
   };
 
 export const some =
-  <T>(parser: Parser<T>): Parser<T[]> =>
-  (input: ParseInput) => {
+  <T>(parser: Parser<T>): Parser<T[]> => (input: ParseInput) => {
     let [result, remainder] = parser(input);
 
     if (!result.ok) return [result, remainder];
@@ -157,29 +152,29 @@ export const optional = <T>(parser: Parser<T>) => or(parser, empty);
 
 export const precededBy = <T, R>(
   precedingParser: Parser<T>,
-  parser: Parser<R>
+  parser: Parser<R>,
 ): Parser<R> => map(and(precedingParser, parser), ([, result]) => result);
 
 export const succeededBy = <T, R>(
   succeedingParser: Parser<R>,
-  parser: Parser<T>
+  parser: Parser<T>,
 ): Parser<T> => map(and(parser, succeedingParser), ([result]) => result);
 
 export const joinedBy = <T, Q>(
   joiningParser: Parser<T>,
-  parser: Parser<Q>
+  parser: Parser<Q>,
 ): Parser<[Q, Q]> => and(succeededBy(joiningParser, parser), parser);
 
 export const delimitedBy = <T, R, Q>(
   precedingParser: Parser<T>,
   succeedingParser: Parser<R>,
-  parser: Parser<Q>
+  parser: Parser<Q>,
 ): Parser<Q> =>
   precededBy(precedingParser, succeededBy(succeedingParser, parser));
 
 export const surroundedBy = <T, Q>(
   surroundingParser: Parser<T>,
-  parser: Parser<Q>
+  parser: Parser<Q>,
 ) => delimitedBy(surroundingParser, surroundingParser, parser);
 
 export const spaced = <T>(parser: Parser<T>): Parser<T> =>
@@ -199,19 +194,21 @@ const positiveDigit = any(
   char("6"),
   char("7"),
   char("8"),
-  char("9")
+  char("9"),
 );
 
 const zero = char("0");
 
 const digit = any(zero, positiveDigit);
 
-export const natural = map(some(digit), (digits) =>
-  parseInt(digits.join(""), 10)
+export const natural = map(
+  some(digit),
+  (digits) => parseInt(digits.join(""), 10),
 );
 
-export const integer = map(and(optional(char("-")), natural), (result) =>
-  parseInt(result.join(""), 10)
+export const integer = map(
+  and(optional(char("-")), natural),
+  (result) => parseInt(result.join(""), 10),
 );
 
 export const number = map(
@@ -220,12 +217,12 @@ export const number = map(
     optional(
       and(
         char("."),
-        map(some(digit), (digits) => digits.join(""))
-      )
-    )
+        map(some(digit), (digits) => digits.join("")),
+      ),
+    ),
   ),
   ([integerPart, decimalPart]) =>
     decimalPart === ""
       ? integerPart
-      : parseFloat(integerPart + decimalPart.join(""))
+      : parseFloat(integerPart + decimalPart.join("")),
 );

@@ -1,3 +1,6 @@
+import { PatternMatcher, type Token, Tokenizer } from "./lexer.ts";
+import { number } from "./parser-combinators.ts";
+import { Parser } from "./parser.ts";
 import { err, ok } from "./result.ts";
 
 type TokenKind =
@@ -5,7 +8,6 @@ type TokenKind =
   | "STRING"
   | "NUMBER"
   | "IDENTIFIER"
-
   // Grouping symbols
   | "OPEN_PAREN"
   | "CLOSE_PAREN"
@@ -13,7 +15,6 @@ type TokenKind =
   | "CLOSE_SQUARE_BRACKET"
   | "OPEN_CURLY_BRACKET"
   | "CLOSE_CURLY_BRACKET"
-
   // Mathematical Operators
   | "PLUS"
   | "MINUS"
@@ -21,7 +22,6 @@ type TokenKind =
   | "DIV"
   | "MOD"
   | "EXP"
-
   // ???
   | "COMMA"
   | "DOT"
@@ -30,10 +30,8 @@ type TokenKind =
   | "INTERROGATION"
   | "EXCLAMATION"
   | "COLON"
-
   // Assignment Operators
   | "ASSIGN"
-
   // Comparison Operators
   | "EQUALS"
   | "NOT_EQUALS"
@@ -41,13 +39,11 @@ type TokenKind =
   | "LESS_THAN_OR_EQUAL"
   | "GREATER_THAN"
   | "GREATER_THAN_OR_EQUAL"
-
   // Logical Operators
   | "OR"
   | "AND"
   | "INC"
   | "DEC"
-
   // Reserved Keywords
   | "LET"
   | "CONST"
@@ -68,7 +64,7 @@ type TokenKind =
   | "IN";
 
 function createConstToken<Kind extends string>(
-  kind: Kind
+  kind: Kind,
 ): PatternMatcher<Kind> {
   return {
     kind,
@@ -113,3 +109,18 @@ const tokens = tokenizer.tokenize("14+                32 - 44 * 43 ^ 4 / 23");
 
 if (tokens.ok) console.log(tokens.value.map((t) => t.value));
 if (!tokens.ok) console.log(tokens.error);
+
+const parser = new Parser([
+  {
+    kind: "NUMBER" as const,
+    leftBindingPower: 0,
+    matcher: (input: string) => {
+      const [numberMatch] = number(input);
+      if (numberMatch.ok) {
+        return ok({ match: String(numberMatch.value) });
+      }
+      return err(`Failed to match: ${input} as a number`);
+    },
+    nud: (token) => {},
+  },
+]);

@@ -1,4 +1,4 @@
-import { Tokenizer, PatternMatcher, type Token } from "./lexer.ts";
+import { PatternMatcher, type Token, Tokenizer } from "./lexer.ts";
 import { err, ok, Result } from "./result.ts";
 
 type Symbol<Kind extends string, ASTNode> = {
@@ -9,8 +9,10 @@ type Symbol<Kind extends string, ASTNode> = {
   fud?: (token: Token<Kind>) => ASTNode;
 };
 
-type Grammar<Kind extends string, Node> = (Symbol<Kind, Node> &
-  PatternMatcher<Kind>)[];
+type Grammar<Kind extends string, Node> = (
+  & Symbol<Kind, Node>
+  & PatternMatcher<Kind>
+)[];
 
 export class Parser<Kind extends string, Node> {
   tokenizer: Tokenizer<Kind>;
@@ -23,7 +25,7 @@ export class Parser<Kind extends string, Node> {
         acc[kind] = { kind, leftBindingPower, nud, led, fud };
         return acc;
       },
-      {} as Record<Kind, Symbol<Kind, Node>>
+      {} as Record<Kind, Symbol<Kind, Node>>,
     );
   }
 
@@ -53,8 +55,9 @@ export class Parser<Kind extends string, Node> {
 
   expression(rbp: number): Result<Node> {
     let currToken = this.getToken();
-    if (!currToken.ok)
+    if (!currToken.ok) {
       return err("Expected at least one token in expression, got none");
+    }
 
     let currSymbol = this.symbols[currToken.value.kind];
 

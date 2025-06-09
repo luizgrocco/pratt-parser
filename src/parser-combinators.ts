@@ -203,12 +203,12 @@ const digit = any(zero, positiveDigit);
 
 export const natural = map(
   some(digit),
-  (digits) => parseInt(digits.join(""), 10),
+  (digits) => digits.join(""),
 );
 
 export const integer = map(
   and(optional(char("-")), natural),
-  (result) => parseInt(result.join(""), 10),
+  (result) => result.join(""),
 );
 
 export const number = map(
@@ -224,5 +224,5 @@ export const number = map(
   ([integerPart, decimalPart]) =>
     decimalPart === ""
       ? integerPart
-      : parseFloat(integerPart + decimalPart.join("")),
+      : (integerPart + decimalPart.join("")),
 );

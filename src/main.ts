@@ -9,41 +9,41 @@ type TokenKind =
   | "NUMBER"
   | "IDENTIFIER"
   // Grouping symbols
-  | "OPEN_PAREN"
-  | "CLOSE_PAREN"
-  | "OPEN_SQUARE_BRACKET"
-  | "CLOSE_SQUARE_BRACKET"
-  | "OPEN_CURLY_BRACKET"
-  | "CLOSE_CURLY_BRACKET"
+  | "("
+  | ")"
+  | "["
+  | "]"
+  | "{"
+  | "}"
   // Mathematical Operators
-  | "PLUS"
-  | "MINUS"
-  | "MULT"
-  | "DIV"
-  | "MOD"
-  | "EXP"
+  | "+"
+  | "-"
+  | "*"
+  | "/"
+  | "%"
+  | "^"
   // ???
-  | "COMMA"
-  | "DOT"
-  | "DOT_DOT"
-  | "SEMI_COLON"
-  | "INTERROGATION"
-  | "EXCLAMATION"
-  | "COLON"
+  | ","
+  | "."
+  | ".."
+  | ";"
+  | "?"
+  | "!"
+  | ":"
   // Assignment Operators
-  | "ASSIGN"
+  | "="
   // Comparison Operators
-  | "EQUALS"
-  | "NOT_EQUALS"
-  | "LESS_THAN"
-  | "LESS_THAN_OR_EQUAL"
-  | "GREATER_THAN"
-  | "GREATER_THAN_OR_EQUAL"
+  | "=="
+  | "!="
+  | "<"
+  | "<="
+  | ">"
+  | ">="
   // Logical Operators
-  | "OR"
-  | "AND"
-  | "INC"
-  | "DEC"
+  | "||"
+  | "&&"
+  | "++"
+  | "--"
   // Reserved Keywords
   | "LET"
   | "CONST"
@@ -63,7 +63,7 @@ type TokenKind =
   | "TYPEOF"
   | "IN";
 
-function createConstToken<Kind extends string>(
+function createLiteralToken<Kind extends string>(
   kind: Kind,
 ): PatternMatcher<Kind> {
   return {
@@ -76,11 +76,11 @@ function createConstToken<Kind extends string>(
 }
 
 const tokenMatchers = [
-  createConstToken("+"),
-  createConstToken("-"),
-  createConstToken("*"),
-  createConstToken("/"),
-  createConstToken("^"),
+  createLiteralToken("+"),
+  createLiteralToken("-"),
+  createLiteralToken("*"),
+  createLiteralToken("/"),
+  createLiteralToken("^"),
   {
     kind: "NUMBER" as const,
     matcher: (input: string) => {
@@ -101,11 +101,33 @@ const tokenMatchers = [
       return err("Failed to match: " + input);
     },
   },
+  {
+    kind: "VARIABLE" as const,
+    matcher: (input: string) => {
+      const variableMatch = input.match(/^[a-zA-Z_$][a-zA-Z0-9_$]*/);
+      if (variableMatch) {
+        return ok({ match: variableMatch[0] });
+      }
+      return err("Failed to match: " + input);
+    },
+  },
+  {
+    kind: "KEYWORD" as const,
+    matcher: (input: string) => {
+      const keywordMatch = input.match(/^const\b/);
+      if (keywordMatch) {
+        return ok({ match: keywordMatch[0] });
+      }
+      return err("Failed to match: " + input);
+    },
+  },
 ];
 
 const tokenizer = new Tokenizer(tokenMatchers);
 
-const tokens = tokenizer.tokenize("14+                32 - 44 * 43 ^ 4 / 23");
+const tokens = tokenizer.tokenize(
+  "14+                32 - 44 * 43 ^ 4 / 23 + constantine + const a",
+);
 
 if (tokens.ok) console.log(tokens.value.map((t) => t.value));
 if (!tokens.ok) console.log(tokens.error);
@@ -117,10 +139,14 @@ const parser = new Parser([
     matcher: (input: string) => {
       const [numberMatch] = number(input);
       if (numberMatch.ok) {
-        return ok({ match: String(numberMatch.value) });
+        return ok({ match: numberMatch.value });
       }
       return err(`Failed to match: ${input} as a number`);
     },
-    nud: (token) => {},
+    nud: (token) =>
+      ok({
+        type: "NumericLiteral" as const,
+        value: Number(token.value),
+      }),
   },
 ]);

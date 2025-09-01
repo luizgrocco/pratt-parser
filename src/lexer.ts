@@ -5,13 +5,13 @@ type Match = {
   skip?: boolean;
 };
 
-export type PatternMatcher<Kind extends string> = {
-  kind: Kind;
+export type PatternMatcher<PatternKind extends string> = {
+  kind: PatternKind;
   matcher: (input: string) => Result<Match>;
 };
 
-export type Token<Kind extends string> = {
-  kind: Kind;
+export type Token<TokenKind extends string> = {
+  kind: TokenKind;
   value: string;
 };
 
